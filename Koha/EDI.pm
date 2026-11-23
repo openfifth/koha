@@ -237,8 +237,9 @@ sub process_ordrsp {
     my $schema = Koha::Database->new()->schema();
     my $logger = Koha::Logger->get( { interface => 'edi' } );
     my $vendor_acct;
-    my $edi      = _edifact_parser($response_message) or return;
-    my $messages = $edi->message_array();
+    my $has_errors = 0;
+    my $edi        = _edifact_parser($response_message) or return;
+    my $messages   = $edi->message_array();
 
     if ( @{$messages} ) {
         foreach my $msg ( @{$messages} ) {
@@ -251,24 +252,54 @@ sub process_ordrsp {
                 if ( $action eq 'cancelled' ) {
                     my $reason = $line->coded_orderline_text();
                     my $order  = Koha::Acquisition::Orders->find($ordernumber);
-                    if ($order) {
+                    if ( !$order ) {
+                        $logger->error("EDI ORDRSP: ordernumber $ordernumber not found, cannot process cancellation");
+                    } elsif ( $order->orderstatus eq 'cancelled' ) {
+
+                        # The supplier may repeat a cancellation, nothing to do
+                        $logger->debug("EDI ORDRSP: order $ordernumber is already cancelled");
+                    } elsif ( $order->quantityreceived or $order->invoiceid or $order->orderstatus eq 'complete' ) {
+
+                        # Cancelling a line that has been receipted would drop it from the
+                        # fund's spent total, so leave it alone and tell the librarian
+                        my $details = sprintf(
+                            'Order %s was not cancelled: the supplier reported "%s" but the order line has already been received or invoiced',
+                            $ordernumber, $reason // q{}
+                        );
+                        $response_message->add_to_edifact_errors(
+                            {
+                                section => 'LIN+' . ( $line->line_item_number // q{} ) . ' RFF+LI:' . $ordernumber,
+                                details => $details,
+                            }
+                        );
+                        $logger->warn("EDI ORDRSP: $details");
+                        $has_errors = 1;
+                    } else {
                         $order->cancel( { reason => $reason } );
 
                         # cancel() records item deletion failures ( e.g. an item still has holds )
-                        # as object messages instead of dying; log any such messages so they are
-                        # not lost in the automated flow
+                        # as object messages instead of dying; log and report any such messages
+                        # so they are not lost in the automated flow
                         for my $message ( @{ $order->object_messages } ) {
-                            my $item = $message->payload->{item};
-                            $logger->warn(
-                                sprintf(
-                                    'EDI ORDRSP: order %s cancellation issue: %s%s',
-                                    $ordernumber, $message->message,
-                                    $item ? ' for itemnumber ' . $item->itemnumber : q{}
-                                )
+                            my $item  = $message->payload->{item};
+                            my $issue = sprintf(
+                                'order %s cancellation issue: %s%s',
+                                $ordernumber, $message->message,
+                                $item ? ' for itemnumber ' . $item->itemnumber : q{}
                             );
+                            $logger->warn("EDI ORDRSP: $issue");
+                            $response_message->add_to_edifact_errors(
+                                {
+                                    section => 'RFF+LI:' . $ordernumber,
+                                    details => 'Order cancelled but '
+                                        . $issue
+                                        . (
+                                        $message->payload->{reason} ? ' (' . $message->payload->{reason} . ')' : q{}
+                                        ),
+                                }
+                            );
+                            $has_errors = 1;
                         }
-                    } else {
-                        $logger->error("EDI ORDRSP: ordernumber $ordernumber not found, cannot process cancellation");
                     }
                 } else {    # record order as due with possible further info
 
@@ -289,7 +320,7 @@ sub process_ordrsp {
         }
     }
 
-    $response_message->status('received');
+    $response_message->status( $has_errors ? 'error' : 'received' );
     $response_message->update;
     return;
 }
@@ -2093,6 +2124,12 @@ Koha::EDI
      passed a message object for a supplier response, process the contents
      If an orderline is cancelled cancel the corresponding orderline in koha
      otherwise record the supplier message against it
+
+     A cancellation is not applied to a line that has already been received or
+     invoiced, and a line that is already cancelled is left alone. Items that
+     could not be removed when a line was cancelled are reported as well. Both
+     situations are recorded as edifact_errors against the message, which is
+     given the status 'error'.
 
      no meaningful return value
 

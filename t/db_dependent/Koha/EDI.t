@@ -3409,7 +3409,7 @@ subtest 'process_message' => sub {
 };
 
 subtest 'process_ordrsp' => sub {
-    plan tests => 4;
+    plan tests => 6;
 
     $schema->storage->txn_begin;
 
@@ -3436,6 +3436,9 @@ subtest 'process_ordrsp' => sub {
                     biblionumber => $biblio->biblionumber,
                     budget_id    => $budget->{budget_id},
                     orderstatus  => 'ordered',
+
+                    quantityreceived => 0,
+                    invoiceid        => undef,
                 },
             }
         );
@@ -3538,7 +3541,7 @@ subtest 'process_ordrsp' => sub {
     };
 
     subtest 'cancellation retains items that cannot be safely deleted' => sub {
-        plan tests => 4;
+        plan tests => 7;
 
         my $biblio        = $builder->build_sample_biblio();
         my $item          = $builder->build_sample_item( { biblionumber => $biblio->biblionumber } );
@@ -3560,6 +3563,9 @@ subtest 'process_ordrsp' => sub {
                     biblionumber => $biblio->biblionumber,
                     budget_id    => $budget->{budget_id},
                     orderstatus  => 'ordered',
+
+                    quantityreceived => 0,
+                    invoiceid        => undef,
                 },
             }
         );
@@ -3605,6 +3611,150 @@ subtest 'process_ordrsp' => sub {
             qr/cancellation issue: error_delitem/,
             'Item deletion failure recorded in the EDI log'
         );
+
+        $edi_msg->discard_changes;
+        is( $edi_msg->status, 'error', 'Message status is error so the librarian can see it' );
+        my $errors = $edi_msg->edifact_errors;
+        is( $errors->count, 1, 'One error recorded against the message' );
+        like(
+            $errors->next->details,
+            qr/Order cancelled but order \d+ cancellation issue: error_delitem for itemnumber \d+ \(item_has_holds\)/,
+            'Error says which item could not be removed and why'
+        );
+    };
+
+    subtest 'cancellation of a received or invoiced line is refused' => sub {
+        plan tests => 9;
+
+        my $biblio        = $builder->build_sample_biblio();
+        my $bookseller    = $builder->build_object( { class => 'Koha::Acquisition::Booksellers' } );
+        my $budget_period = $builder->build( { source => 'Aqbudgetperiod', value => { budget_period_active => 1 } } );
+        my $budget        = $builder->build(
+            { source => 'Aqbudget', value => { budget_period_id => $budget_period->{budget_period_id} } } );
+        my $basket = $builder->build_object(
+            {
+                class => 'Koha::Acquisition::Baskets',
+                value => { booksellerid => $bookseller->id, is_standing => 0 },
+            }
+        );
+        my $invoice = $builder->build_object( { class => 'Koha::Acquisition::Invoices' } );
+
+        my %base = (
+            basketno                => $basket->basketno,
+            biblionumber            => $biblio->biblionumber,
+            budget_id               => $budget->{budget_id},
+            quantity                => 2,
+            datecancellationprinted => undef,
+            cancellationreason      => undef,
+        );
+        my $received = $builder->build_object(
+            {
+                class => 'Koha::Acquisition::Orders',
+                value => { %base, orderstatus => 'complete', quantityreceived => 2, invoiceid => $invoice->id },
+            }
+        );
+        my $invoiced = $builder->build_object(
+            {
+                class => 'Koha::Acquisition::Orders',
+                value => { %base, orderstatus => 'ordered', quantityreceived => 0, invoiceid => $invoice->id },
+            }
+        );
+        my $partial_remainder = $builder->build_object(
+            {
+                class => 'Koha::Acquisition::Orders',
+                value => { %base, orderstatus => 'partial', quantityreceived => 0, invoiceid => undef },
+            }
+        );
+
+        my $spent_before = C4::Budgets::GetBudgetSpent( $budget->{budget_id} );
+
+        my $edi_msg = $schema->resultset('EdifactMessage')->create(
+            {
+                message_type => 'ORDRSP',
+                raw_msg      => _build_ordrsp_msg( $received->ordernumber, 2, 'OP' ),
+                status       => 'new',
+            }
+        );
+        $logger->clear();
+        process_ordrsp($edi_msg);
+
+        $received->discard_changes;
+        is( $received->orderstatus,                              'complete',    'Received line is not cancelled' );
+        is( $received->datecancellationprinted,                  undef,         'No cancellation date set' );
+        is( C4::Budgets::GetBudgetSpent( $budget->{budget_id} ), $spent_before, 'Fund spent total is unchanged' );
+        $edi_msg->discard_changes;
+        is( $edi_msg->status, 'error', 'Message flagged as error' );
+        like(
+            $edi_msg->edifact_errors->next->details,
+            qr/not cancelled.*already been received or invoiced/,
+            'Librarian is told why'
+        );
+        $logger->warn_like( qr/already been received or invoiced/, 'Refusal is logged' );
+
+        $edi_msg = $schema->resultset('EdifactMessage')->create(
+            {
+                message_type => 'ORDRSP',
+                raw_msg      => _build_ordrsp_msg( $invoiced->ordernumber, 2, 'OP' ),
+                status       => 'new',
+            }
+        );
+        process_ordrsp($edi_msg);
+        $invoiced->discard_changes;
+        isnt( $invoiced->orderstatus, 'cancelled', 'Invoiced line is not cancelled' );
+
+        # The outstanding remainder of a split receipt is a legitimate target
+        $edi_msg = $schema->resultset('EdifactMessage')->create(
+            {
+                message_type => 'ORDRSP',
+                raw_msg      => _build_ordrsp_msg( $partial_remainder->ordernumber, 2, 'OP' ),
+                status       => 'new',
+            }
+        );
+        process_ordrsp($edi_msg);
+        $partial_remainder->discard_changes;
+        is(
+            $partial_remainder->orderstatus, 'cancelled',
+            'Outstanding remainder of a part-received line is cancelled'
+        );
+        $edi_msg->discard_changes;
+        is( $edi_msg->status, 'received', 'No error for the outstanding remainder' );
+    };
+
+    subtest 'repeated cancellation is ignored' => sub {
+        plan tests => 4;
+
+        my $bookseller = $builder->build_object( { class => 'Koha::Acquisition::Booksellers' } );
+        my $basket     = $builder->build_object(
+            { class => 'Koha::Acquisition::Baskets', value => { booksellerid => $bookseller->id } } );
+        my $order = $builder->build_object(
+            {
+                class => 'Koha::Acquisition::Orders',
+                value => {
+                    basketno                => $basket->basketno,
+                    orderstatus             => 'cancelled',
+                    datecancellationprinted => '2026-01-02',
+                    cancellationreason      => 'Out of print',
+                    quantityreceived        => 0,
+                    invoiceid               => undef,
+                },
+            }
+        );
+
+        my $edi_msg = $schema->resultset('EdifactMessage')->create(
+            {
+                message_type => 'ORDRSP',
+                raw_msg      => _build_ordrsp_msg( $order->ordernumber, 2, 'IB' ),
+                status       => 'new',
+            }
+        );
+        process_ordrsp($edi_msg);
+
+        $order->discard_changes;
+        is( $order->cancellationreason,            'Out of print', 'Reason is not overwritten' );
+        is( $order->datecancellationprinted . q{}, '2026-01-02',   'Date is not overwritten' );
+        $edi_msg->discard_changes;
+        is( $edi_msg->status,                'received', 'Message processed without error' );
+        is( $edi_msg->edifact_errors->count, 0,          'No error recorded' );
     };
 
     $schema->storage->txn_rollback;
