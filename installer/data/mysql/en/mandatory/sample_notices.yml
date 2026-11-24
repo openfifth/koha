@@ -156,6 +156,40 @@ tables:
             - ""
             - "This is an automated notification. Please do not reply to this email."
 
+        - module: acquisition
+          code: EDI_ORDRSP_CANCEL
+          branchcode: ""
+          name: "EDIFACT order response - order lines cancelled by the supplier"
+          is_html: 0
+          title: "EDIFACT order response: [% IF cancelled_count %][% cancelled_count %] order line(s) cancelled[% ELSE %]cancellation needs attention[% END %]"
+          message_transport_type: email
+          lang: default
+          content:
+            - "[%- USE Koha -%]The supplier's order response [% filename %] has been processed."
+            - ""
+            - "Vendor: [% bookseller.name %] (ID: [% vendor_id %])"
+            - "Order lines cancelled by the supplier: [% cancelled_count %]"
+            - ""
+            - "[% FOREACH c IN cancellations -%]"
+            - "* Order [% c.ordernumber %], basket [% c.basketname %]: [% c.title %] ([% c.reason %])"
+            - "[%- IF c.holds_cancelled %]"
+            - "    Holds cancelled: [% c.holds_cancelled %]"
+            - "[%- END %]"
+            - "[%- FOREACH n IN c.notes %]"
+            - "    ! [% n %]"
+            - "[%- END %]"
+            - "[% END -%]"
+            - "[% IF attention.size -%]"
+            - "Needs your attention:"
+            - "[% FOREACH a IN attention -%]"
+            - "* [% a %]"
+            - "[% END -%]"
+            - "[% END -%]"
+            - ""
+            - "View EDI message: [% Koha.Preference('staffClientBaseURL') %]/cgi-bin/koha/acqui/edimsg.pl?id=[% message_id | uri %]"
+            - ""
+            - "This is an automated notification from your Koha system."
+
         - module: bookings
           code: BOOKING_CANCELLATION
           branchcode: ""

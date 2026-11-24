@@ -3409,7 +3409,7 @@ subtest 'process_message' => sub {
 };
 
 subtest 'process_ordrsp' => sub {
-    plan tests => 8;
+    plan tests => 9;
 
     $schema->storage->txn_begin;
 
@@ -3803,7 +3803,7 @@ subtest 'process_ordrsp' => sub {
     };
 
     subtest 'cancellation cancels holds using the reason mapped to the supplier code' => sub {
-        plan tests => 20;
+        plan tests => 22;
 
         my $bookseller    = $builder->build_object( { class => 'Koha::Acquisition::Booksellers' } );
         my $budget_period = $builder->build( { source => 'Aqbudgetperiod', value => { budget_period_active => 1 } } );
@@ -3913,6 +3913,17 @@ subtest 'process_ordrsp' => sub {
         is( $edi_msg->status,                'received', 'The message is received without errors' );
         is( $edi_msg->edifact_errors->count, 0,          'No errors recorded' );
 
+        # The staff notification says how many holds were cancelled
+        t::lib::Mocks::mock_preference( 'EdifactOrdrspCancelEmailNotice',  'AcquisitionsDefaultEmailAddress' );
+        t::lib::Mocks::mock_preference( 'AcquisitionsDefaultEmailAddress', 'acq@example.org' );
+        $run->($codes);
+        my $digest = Koha::Notice::Messages->search(
+            { letter_code => 'EDI_ORDRSP_CANCEL' },
+            { order_by    => { -desc => 'message_id' }, rows => 1 }
+        )->next;
+        like( $digest->content, qr/Holds cancelled: 1/, 'The staff notification says how many holds were cancelled' );
+        t::lib::Mocks::mock_preference( 'EdifactOrdrspCancelEmailNotice', '0' );
+
         # Order of the codes on the line decides which reason wins
         ( $order, $item, $hold ) = $run->( [ '223:12B', 'OP:8B' ] );
         is(
@@ -3973,7 +3984,170 @@ subtest 'process_ordrsp' => sub {
             'Saying the patrons were not told'
         );
 
+        # ... and the staff notification repeats that
+        t::lib::Mocks::mock_preference( 'EdifactOrdrspCancelEmailNotice', 'AcquisitionsDefaultEmailAddress' );
+        {
+            local $SIG{__WARN__} = sub { };
+            $run->($codes);
+        }
+        $digest = Koha::Notice::Messages->search(
+            { letter_code => 'EDI_ORDRSP_CANCEL' },
+            { order_by    => { -desc => 'message_id' }, rows => 1 }
+        )->next;
+        like( $digest->content, qr/patrons were not told/, 'The staff notification says the patrons were not told' );
+
+        t::lib::Mocks::mock_preference( 'EdifactOrdrspCancelEmailNotice',       '0' );
         t::lib::Mocks::mock_preference( 'EdifactOrdrspHoldCancellationReasons', q{} );
+    };
+
+    subtest 'notification of cancellations' => sub {
+        plan tests => 16;
+
+        my $bookseller    = $builder->build_object( { class => 'Koha::Acquisition::Booksellers' } );
+        my $budget_period = $builder->build( { source => 'Aqbudgetperiod', value => { budget_period_active => 1 } } );
+        my $budget        = $builder->build(
+            { source => 'Aqbudget', value => { budget_period_id => $budget_period->{budget_period_id} } } );
+        my $basket = $builder->build_object(
+            {
+                class => 'Koha::Acquisition::Baskets',
+                value => { booksellerid => $bookseller->id, is_standing => 0, basketname => 'ORDRSPNOTICE' },
+            }
+        );
+
+        my $new_order = sub {
+            my (%extra) = @_;
+            my $biblio = $builder->build_sample_biblio( { title => 'Notified title' } );
+            return $builder->build_object(
+                {
+                    class => 'Koha::Acquisition::Orders',
+                    value => {
+                        basketno                => $basket->basketno,
+                        biblionumber            => $biblio->biblionumber,
+                        budget_id               => $budget->{budget_id},
+                        orderstatus             => 'ordered',
+                        quantityreceived        => 0,
+                        invoiceid               => undef,
+                        datecancellationprinted => undef,
+                        %extra,
+                    },
+                }
+            );
+        };
+        my $process = sub {
+            my ($order) = @_;
+            my $edi_msg = $schema->resultset('EdifactMessage')->create(
+                {
+                    message_type => 'ORDRSP',
+                    raw_msg      => _build_ordrsp_msg( $order->ordernumber, 2, 'OP' ),
+                    status       => 'new',
+                    vendor_id    => $bookseller->id,
+                    filename     => 'ORDRSP_notice_test.CEA',
+                }
+            );
+            process_ordrsp($edi_msg);
+            return $edi_msg;
+        };
+        my $notices = sub {
+            return Koha::Notice::Messages->search(
+                { letter_code => 'EDI_ORDRSP_CANCEL' },
+                { order_by    => 'message_id' }
+            );
+        };
+
+        # Off by default: nothing queued
+        t::lib::Mocks::mock_preference( 'EdifactOrdrspCancelEmailNotice', '0' );
+        my $before = $notices->()->count;
+        $process->( $new_order->() );
+        is( $notices->()->count, $before, 'No notification when the preference is off' );
+
+        # One recipient: one email listing the order
+        t::lib::Mocks::mock_preference( 'EdifactOrdrspCancelEmailNotice',  'AcquisitionsDefaultEmailAddress' );
+        t::lib::Mocks::mock_preference( 'AcquisitionsDefaultEmailAddress', 'acq@example.org' );
+        $before = $notices->()->count;
+        my $order = $new_order->();
+        $process->($order);
+        my @sent = $notices->()->as_list;
+        is( scalar(@sent) - $before, 1, 'One notification queued' );
+        my $notice = $sent[-1];
+        is( $notice->to_address, 'acq@example.org', 'Sent to the acquisitions address' );
+        like( $notice->subject, qr/1 order line\(s\) cancelled/, 'Subject gives the number of lines' );
+        like(
+            $notice->content,
+            qr/Order \Q@{[ $order->ordernumber ]}\E, basket ORDRSPNOTICE: Notified title \(Out of print\)/,
+            'Content lists the order line, basket, title and reason'
+        );
+        like( $notice->content, qr/ORDRSP_notice_test\.CEA/, 'Content names the EDI message file' );
+        unlike( $notice->content, qr/Needs your attention/, 'No attention section when everything went well' );
+
+        # Specific addresses: one email each, invalid addresses skipped
+        t::lib::Mocks::mock_preference( 'EdifactOrdrspCancelEmailNotice', 'EdifactOrdrspCancelEmailAddresses' );
+        t::lib::Mocks::mock_preference(
+            'EdifactOrdrspCancelEmailAddresses',
+            'a@example.org, b@example.org , not-an-address'
+        );
+        $before = $notices->()->count;
+        $process->( $new_order->() );
+        is( $notices->()->count - $before, 2, 'One notification for each valid address' );
+
+        # A refused cancellation is reported under "Needs your attention"
+        t::lib::Mocks::mock_preference( 'EdifactOrdrspCancelEmailNotice', 'AcquisitionsDefaultEmailAddress' );
+        $before = $notices->()->count;
+        my $received = $new_order->( orderstatus => 'complete', quantityreceived => 1 );
+        $process->($received);
+        @sent = $notices->()->as_list;
+        is( scalar(@sent) - $before, 1, 'A refused cancellation is notified' );
+        like(
+            $sent[-1]->content,
+            qr/Needs your attention:\s+\* Order \Q@{[ $received->ordernumber ]}\E was not cancelled/,
+            'The refusal is listed under needs attention'
+        );
+        like(
+            $sent[-1]->subject, qr/cancellation needs attention/,
+            'Subject flags a digest with no applied cancellation'
+        );
+
+        # An item that could not be removed is listed under its order line
+        my $held_order = $new_order->();
+        my $held_item  = $builder->build_sample_item( { biblionumber => $held_order->biblionumber } );
+        $held_order->add_item( $held_item->itemnumber );
+        $builder->build_object(
+            {
+                class => 'Koha::Holds',
+                value =>
+                    { biblionumber => $held_order->biblionumber, itemnumber => $held_item->itemnumber, found => undef },
+            }
+        );
+        $before = $notices->()->count;
+        $process->($held_order);
+        @sent = $notices->()->as_list;
+        like(
+            $sent[-1]->content,
+            qr/! Order cancelled but order \d+ cancellation issue: error_delitem for itemnumber \d+/,
+            'The item that could not be deleted is listed under its line'
+        );
+
+        # Nothing cancelled and nothing to report: nothing is sent
+        my $already = $new_order->( orderstatus => 'cancelled', datecancellationprinted => '2026-01-02' );
+        $before = $notices->()->count;
+        $process->($already);
+        is( $notices->()->count, $before, 'No notification for a repeated cancellation' );
+
+        # Message without a vendor still produces a notification
+        my $no_vendor_msg = $schema->resultset('EdifactMessage')->create(
+            {
+                message_type => 'ORDRSP',
+                raw_msg      => _build_ordrsp_msg( $new_order->()->ordernumber, 2, 'OP' ),
+                status       => 'new',
+            }
+        );
+        $before = $notices->()->count;
+        process_ordrsp($no_vendor_msg);
+        is( $notices->()->count - $before, 1, 'A message without a vendor is still notified' );
+        $no_vendor_msg->discard_changes;
+        is( $no_vendor_msg->status, 'received', 'Message is received' );
+
+        t::lib::Mocks::mock_preference( 'EdifactOrdrspCancelEmailNotice', '0' );
+        ok( 1, 'Preference restored' );
     };
 
     subtest 'repeated cancellation is ignored' => sub {

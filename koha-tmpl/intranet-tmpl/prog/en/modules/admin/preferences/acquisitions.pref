@@ -252,3 +252,15 @@ Acquisitions:
             - pref: EdifactOrderSendBlockDuplicatesEmailAddresses
               type: textarea
               class: code
+        -
+            - "Send a notification using the EDI_ORDRSP_CANCEL notice template when a supplier order response cancels order lines, or a cancellation cannot be applied, to:"
+            - pref: EdifactOrdrspCancelEmailNotice
+              choices:
+                  0: "Do not send"
+                  AcquisitionsDefaultEmailAddress: AcquisitionsDefaultEmailAddress
+                  EdifactOrdrspCancelEmailAddresses: "specific email addresses"
+                  KohaAdminEmailAddress: KohaAdminEmailAddress
+            - '<br>One email is sent for each order response message.<br>If choosing specific email addresses, enter them here (comma-separated):'
+            - pref: EdifactOrdrspCancelEmailAddresses
+              type: textarea
+              class: code

@@ -238,9 +238,11 @@ sub process_ordrsp {
     my $logger = Koha::Logger->get( { interface => 'edi' } );
     my $vendor_acct;
     my $has_errors = 0;
-    my $nfl_value  = C4::Context->preference('EdifactCancelledItemNotForLoanValue');
-    my $edi        = _edifact_parser($response_message) or return;
-    my $messages   = $edi->message_array();
+    my @cancelled;    # order lines cancelled, for the notification
+    my @attention;    # things the librarian needs to look at
+    my $nfl_value = C4::Context->preference('EdifactCancelledItemNotForLoanValue');
+    my $edi       = _edifact_parser($response_message) or return;
+    my $messages  = $edi->message_array();
 
     if ( @{$messages} ) {
         foreach my $msg ( @{$messages} ) {
@@ -255,6 +257,7 @@ sub process_ordrsp {
                     my $order  = Koha::Acquisition::Orders->find($ordernumber);
                     if ( !$order ) {
                         $logger->error("EDI ORDRSP: ordernumber $ordernumber not found, cannot process cancellation");
+                        push @attention, "Order $ordernumber was not cancelled: it was not found in Koha";
                     } elsif ( $order->orderstatus eq 'cancelled' ) {
 
                         # The supplier may repeat a cancellation, nothing to do
@@ -274,8 +277,10 @@ sub process_ordrsp {
                             }
                         );
                         $logger->warn("EDI ORDRSP: $details");
+                        push @attention, $details;
                         $has_errors = 1;
                     } else {
+                        my @notes;
 
                         # Holds on the items stop them being deleted, so when the library has said
                         # which HOLD_CANCELLATION reason to give for this supplier code, cancel
@@ -308,6 +313,7 @@ sub process_ordrsp {
                                     $response_message->add_to_edifact_errors(
                                         { section => 'RFF+LI:' . $ordernumber, details => $details } );
                                     $logger->warn("EDI ORDRSP: $details");
+                                    push @notes, $details;
                                     $has_errors = 1;
                                 }
                                 next;
@@ -329,19 +335,33 @@ sub process_ordrsp {
                                 $item->notforloan($nfl_value)->store;
                                 $marked = ", marked as not for loan status $nfl_value";
                             }
+                            my $details =
+                                  'Order cancelled but '
+                                . $issue
+                                . ( $message->payload->{reason} ? ' (' . $message->payload->{reason} . ')' : q{} )
+                                . $marked;
                             $response_message->add_to_edifact_errors(
                                 {
                                     section => 'RFF+LI:' . $ordernumber,
-                                    details => 'Order cancelled but '
-                                        . $issue
-                                        . (
-                                        $message->payload->{reason} ? ' (' . $message->payload->{reason} . ')' : q{}
-                                        )
-                                        . $marked,
+                                    details => $details,
                                 }
                             );
+                            push @notes, $details;
                             $has_errors = 1;
                         }
+
+                        my $biblio = $order->biblio;
+                        my $basket = $order->basket;
+                        push @cancelled,
+                            {
+                            ordernumber     => $ordernumber,
+                            basketno        => $order->basketno,
+                            basketname      => $basket ? $basket->basketname : q{},
+                            title           => $biblio ? $biblio->title      : q{},
+                            reason          => $reason // q{},
+                            holds_cancelled => $holds_cancelled,
+                            notes           => \@notes,
+                            };
                     }
                 } else {    # record order as due with possible further info
 
@@ -364,6 +384,83 @@ sub process_ordrsp {
 
     $response_message->status( $has_errors ? 'error' : 'received' );
     $response_message->update;
+
+    _send_ordrsp_cancellation_email_notice( $response_message, \@cancelled, \@attention )
+        if @cancelled or @attention;
+
+    return;
+}
+
+sub _send_ordrsp_cancellation_email_notice {
+    my ( $response_message, $cancelled, $attention ) = @_;
+
+    my $logger = Koha::Logger->get( { interface => 'edi' } );
+
+    my $email_pref = C4::Context->preference('EdifactOrdrspCancelEmailNotice');
+    return unless $email_pref;
+
+    my @addresses;
+    if ( $email_pref eq 'AcquisitionsDefaultEmailAddress' ) {
+        my $addr = C4::Context->preference('AcquisitionsDefaultEmailAddress')
+            || C4::Context->preference('KohaAdminEmailAddress');
+        push @addresses, $addr if $addr;
+    } elsif ( $email_pref eq 'KohaAdminEmailAddress' ) {
+        my $addr = C4::Context->preference('ReplytoDefault')
+            || C4::Context->preference('KohaAdminEmailAddress');
+        push @addresses, $addr if $addr;
+    } elsif ( $email_pref eq 'EdifactOrdrspCancelEmailAddresses' ) {
+        my $list = C4::Context->preference('EdifactOrdrspCancelEmailAddresses');
+        push @addresses, split /\s*,\s*/, $list if $list;
+    }
+
+    my $from_address = C4::Context->preference('AcquisitionsDefaultEmailAddress')
+        || C4::Context->preference('KohaAdminEmailAddress');
+    my $reply_address = C4::Context->preference('AcquisitionsDefaultReplyTo') || undef;
+
+    my $substitute = {
+        filename        => $response_message->filename,
+        message_id      => $response_message->id,
+        vendor_id       => $response_message->vendor_id,
+        received_date   => dt_from_string()->ymd,
+        cancellations   => $cancelled,
+        attention       => $attention,
+        cancelled_count => scalar @{$cancelled},
+    };
+
+    foreach my $to_address (@addresses) {
+        $to_address =~ s/^\s+|\s+$//g;
+        next unless $to_address;
+        next unless Koha::Email->is_valid($to_address);
+
+        my $letter = C4::Letters::GetPreparedLetter(
+            module                 => 'acquisition',
+            letter_code            => 'EDI_ORDRSP_CANCEL',
+            message_transport_type => 'email',
+            tables     => ( $response_message->vendor_id ? { aqbooksellers => $response_message->vendor_id } : {} ),
+            substitute => $substitute,
+        );
+
+        if ( !$letter ) {
+            $logger->warn( 'Could not generate the ORDRSP cancellation notice for message ' . $response_message->id );
+            last;
+        }
+
+        my $queued = C4::Letters::EnqueueLetter(
+            {
+                letter       => $letter,
+                to_address   => $to_address,
+                from_address => $from_address,
+                ( $reply_address ? ( reply_address => $reply_address ) : () ),
+                message_transport_type => 'email',
+            }
+        );
+        if ($queued) {
+            $logger->info("ORDRSP cancellation notice queued (message_id: $queued) for $to_address");
+        } else {
+            $logger->warn("Failed to queue the ORDRSP cancellation notice for $to_address");
+        }
+    }
+
     return;
 }
 
@@ -2293,6 +2390,24 @@ Koha::EDI
     Parameters:
     - $line: The Koha::Edifact::Line for the cancelled order line
     - $logger: The EDI logger
+
+=head2 _send_ordrsp_cancellation_email_notice
+
+    _send_ordrsp_cancellation_email_notice($response_message, \@cancelled, \@attention)
+
+    Internal function to queue one email for an ORDRSP message that cancelled order lines,
+    or that contained a cancellation which could not be applied, using the EDI_ORDRSP_CANCEL
+    letter template.
+
+    The recipients come from the EdifactOrdrspCancelEmailNotice preference: the acquisitions
+    address, the admin address, or the addresses in EdifactOrdrspCancelEmailAddresses. Nothing
+    is sent when the preference is off, and addresses that are not valid are skipped.
+
+    Parameters:
+    - $response_message: The EdifactMessage row for the ORDRSP message
+    - $cancelled: Reference to an array of hashes (ordernumber, basketno, basketname, title,
+      reason and notes) for each order line that was cancelled
+    - $attention: Reference to an array of messages for cancellations that were not applied
 
 =head2 _send_duplicate_order_email_notice
 
