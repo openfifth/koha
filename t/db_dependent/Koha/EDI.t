@@ -3409,7 +3409,7 @@ subtest 'process_message' => sub {
 };
 
 subtest 'process_ordrsp' => sub {
-    plan tests => 7;
+    plan tests => 8;
 
     $schema->storage->txn_begin;
 
@@ -3802,6 +3802,180 @@ subtest 'process_ordrsp' => sub {
         is( $edi_msg->status, 'received', 'No error for the outstanding remainder' );
     };
 
+    subtest 'cancellation cancels holds using the reason mapped to the supplier code' => sub {
+        plan tests => 20;
+
+        my $bookseller    = $builder->build_object( { class => 'Koha::Acquisition::Booksellers' } );
+        my $budget_period = $builder->build( { source => 'Aqbudgetperiod', value => { budget_period_active => 1 } } );
+        my $budget        = $builder->build(
+            { source => 'Aqbudget', value => { budget_period_id => $budget_period->{budget_period_id} } } );
+        my $basket = $builder->build_object(
+            {
+                class => 'Koha::Acquisition::Baskets',
+                value => { booksellerid => $bookseller->id, is_standing => 0 },
+            }
+        );
+        my $patron = $builder->build_object( { class => 'Koha::Patrons', value => { email => 'patron@example.org' } } );
+        for my $av (qw( OUT_OF_PRINT UNABLE_TO_SUPPLY ORDER_CANCELLED )) {
+            Koha::AuthorisedValues->search( { category => 'HOLD_CANCELLATION', authorised_value => $av } )->delete;
+            $builder->build_object(
+                {
+                    class => 'Koha::AuthorisedValues',
+                    value => { category => 'HOLD_CANCELLATION', authorised_value => $av, lib => $av },
+                }
+            );
+        }
+        Koha::Notice::Templates->search( { module => 'reserves', code => 'HOLD_CANCELLATION' } )->delete;
+        $builder->build_object(
+            {
+                class => 'Koha::Notice::Templates',
+                value => {
+                    module                 => 'reserves',
+                    code                   => 'HOLD_CANCELLATION',
+                    message_transport_type => 'email',
+                    lang                   => 'default',
+                    branchcode             => '',
+                    is_html                => 0,
+                    title                  => 'Hold cancelled',
+                    content                => 'Your hold was cancelled.',
+                }
+            }
+        );
+
+        # An order whose only item has a record level hold, then the response cancelling it
+        my $run = sub {
+            my ($codes) = @_;
+            my $item    = $builder->build_sample_item( { notforloan => -1 } );
+            my $order   = $builder->build_object(
+                {
+                    class => 'Koha::Acquisition::Orders',
+                    value => {
+                        basketno                => $basket->basketno,
+                        biblionumber            => $item->biblionumber,
+                        budget_id               => $budget->{budget_id},
+                        orderstatus             => 'ordered',
+                        quantityreceived        => 0,
+                        invoiceid               => undef,
+                        datecancellationprinted => undef,
+                    },
+                }
+            );
+            $order->add_item( $item->id );
+            my $hold = $builder->build_object(
+                {
+                    class => 'Koha::Holds',
+                    value => {
+                        biblionumber   => $item->biblionumber,
+                        borrowernumber => $patron->borrowernumber,
+                        found          => undef,
+                        itemnumber     => undef,
+                    },
+                }
+            );
+            my $edi_msg = $schema->resultset('EdifactMessage')->create(
+                {
+                    message_type => 'ORDRSP',
+                    raw_msg      => _build_ordrsp_msg( $order->ordernumber, 2, $codes ),
+                    status       => 'new',
+                }
+            );
+            $logger->clear();
+            process_ordrsp($edi_msg);
+            $edi_msg->discard_changes;
+            return ( $order, $item, $hold, $edi_msg );
+        };
+        my $codes = [ 'OP:8B', '223:12B' ];
+
+        # Nothing configured: the holds are left alone
+        t::lib::Mocks::mock_preference( 'EdifactOrdrspHoldCancellationReasons', q{} );
+        my ( $order, $item, $hold, $edi_msg ) = $run->($codes);
+        ok( Koha::Holds->find( $hold->id ), 'The hold is left alone when nothing is configured' );
+        ok( Koha::Items->find( $item->id ), 'So the item stays' );
+
+        # A mapped code: the hold is cancelled first so the item can be deleted
+        t::lib::Mocks::mock_preference(
+            'EdifactOrdrspHoldCancellationReasons',
+            "8B:OP: OUT_OF_PRINT\n12B:223: UNABLE_TO_SUPPLY\ndefault: ORDER_CANCELLED\n"
+        );
+        my $queued = Koha::Notice::Messages->search( { letter_code => 'HOLD_CANCELLATION' } )->count;
+        ( $order, $item, $hold, $edi_msg ) = $run->($codes);
+        is( Koha::Holds->find( $hold->id ), undef, 'The hold is cancelled' );
+        is(
+            Koha::Old::Holds->find( $hold->id )->cancellation_reason, 'OUT_OF_PRINT',
+            'With the reason mapped to the first code on the line'
+        );
+        is( Koha::Items->find( $item->id ),        undef,       'The item can then be deleted' );
+        is( $order->get_from_storage->orderstatus, 'cancelled', 'The order is cancelled' );
+        is(
+            Koha::Notice::Messages->search( { letter_code => 'HOLD_CANCELLATION' } )->count,
+            $queued + 1, 'The patron is sent the hold cancellation notice'
+        );
+        is( $edi_msg->status,                'received', 'The message is received without errors' );
+        is( $edi_msg->edifact_errors->count, 0,          'No errors recorded' );
+
+        # Order of the codes on the line decides which reason wins
+        ( $order, $item, $hold ) = $run->( [ '223:12B', 'OP:8B' ] );
+        is(
+            Koha::Old::Holds->find( $hold->id )->cancellation_reason, 'UNABLE_TO_SUPPLY',
+            'The first code on the line wins'
+        );
+
+        # A code that is not mapped uses the default
+        ( $order, $item, $hold ) = $run->( ['AB:8B'] );
+        is(
+            Koha::Old::Holds->find( $hold->id )->cancellation_reason, 'ORDER_CANCELLED',
+            'An unmapped code uses the default'
+        );
+
+        # No default and no mapped code: holds are left alone
+        t::lib::Mocks::mock_preference( 'EdifactOrdrspHoldCancellationReasons', "8B:OP: OUT_OF_PRINT\n" );
+        ( $order, $item, $hold ) = $run->( ['AB:8B'] );
+        ok( Koha::Holds->find( $hold->id ), 'Holds are left alone when no code matches and there is no default' );
+
+        # A reason that is not a HOLD_CANCELLATION value is refused and logged
+        t::lib::Mocks::mock_preference( 'EdifactOrdrspHoldCancellationReasons', "default: NO_SUCH_REASON\n" );
+        ( $order, $item, $hold ) = $run->($codes);
+        ok( Koha::Holds->find( $hold->id ), 'Holds are left alone for an unknown reason' );
+        $logger->warn_like(
+            qr/NO_SUCH_REASON.*not a HOLD_CANCELLATION authorised value/,
+            'The unknown reason is logged'
+        );
+
+        # Invalid YAML does not stop the order being cancelled
+        t::lib::Mocks::mock_preference( 'EdifactOrdrspHoldCancellationReasons', "8B:OP: [unclosed\n" );
+        my @warnings;
+        {
+            local $SIG{__WARN__} = sub { push @warnings, @_ };
+            ( $order, $item, $hold ) = $run->($codes);
+        }
+        like(
+            join( q{}, @warnings ), qr/Unable to parse EdifactOrdrspHoldCancellationReasons/,
+            'Invalid YAML is reported'
+        );
+        is( $order->get_from_storage->orderstatus, 'cancelled', 'The order is still cancelled' );
+        ok( Koha::Holds->find( $hold->id ), 'But the hold is left alone' );
+
+        # No HOLD_CANCELLATION notice: the holds are cancelled but the librarian is told nobody was notified
+        t::lib::Mocks::mock_preference( 'EdifactOrdrspHoldCancellationReasons', "default: ORDER_CANCELLED\n" );
+        Koha::Notice::Templates->search( { module => 'reserves', code => 'HOLD_CANCELLATION' } )->delete;
+        @warnings = ();
+        {
+            local $SIG{__WARN__} = sub { push @warnings, @_ };
+            ( $order, $item, $hold, $edi_msg ) = $run->($codes);
+        }
+        like(
+            join( q{}, @warnings ), qr/No reserves HOLD_CANCELLATION letter/,
+            'Koha warns there is no notice to send'
+        );
+        is( $edi_msg->status, 'error', 'The message is flagged as an error' );
+        like(
+            $edi_msg->edifact_errors->next->details, qr/hold\(s\) were cancelled but the patrons were not told/,
+            'Saying the patrons were not told'
+        );
+
+        t::lib::Mocks::mock_preference( 'EdifactOrdrspHoldCancellationReasons', q{} );
+    };
+
     subtest 'repeated cancellation is ignored' => sub {
         plan tests => 4;
 
@@ -3993,6 +4167,21 @@ subtest 'unparsable interchanges' => sub {
 # reason_code: 'OP'=Out of print, 'IB'=In stock (EditEUR 8B table)
 sub _build_ordrsp_msg {
     my ( $ordernumber, $action_code, $reason_code ) = @_;
+    if ( ref $reason_code ) {    # several codes, as 'CODE:TABLE'
+        return
+              "UNA:+.? '"
+            . "UNB+UNOC:3+5412345000176+4012345000094+200101:1200+1++ORDRSP'"
+            . "UNH+1+ORDRSP:D:96A:UN:EAN005'"
+            . "BGM+231+RSP001+9'"
+            . "LIN+1+$action_code'"
+            . "QTY+21:1'"
+            . join( q{}, map { "FTX+LIN++$_:28'" } @{$reason_code} )
+            . "RFF+LI:$ordernumber'"
+            . "UNS+S'"
+            . "CNT+2:1'"
+            . "UNT+9+1'"
+            . "UNZ+1+1'";
+    }
     return sprintf(
               "UNA:+.? '"
             . "UNB+UNOC:3+5412345000176+4012345000094+200101:1200+1++ORDRSP'"

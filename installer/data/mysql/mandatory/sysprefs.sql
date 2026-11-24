@@ -251,6 +251,7 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('EdifactLSQ', 'location', 'location|ccode|', 'Map EDI sequence code (GIR+LSQ) to Koha Item field, empty to ignore', 'Choice'),
 ('EdifactOrderSendBlockDuplicatesEmailAddresses', '', NULL, 'Comma-separated list of acquisitions staff email addresses to use when EdifactOrderSendBlockDuplicatesEmailNotice is set to specific email addresses.', 'Textarea'),
 ('EdifactOrderSendBlockDuplicatesEmailNotice', '0', '0|AcquisitionsDefaultEmailAddress|EdifactOrderSendBlockDuplicatesEmailAddresses|KohaAdminEmailAddress', 'Send duplicate EDIFACT order block notifications using the EDI_DUP_ORD_LIBRARY notice template to the selected address. Vendor EDI contacts are always notified separately via EDI_DUP_ORD_VENDOR.', 'Choice'),
+('EdifactOrdrspHoldCancellationReasons', '', NULL, 'YAML mapping from the supplier reason code of an EDIFACT ORDRSP cancellation (for example 8B:OP) to the HOLD_CANCELLATION reason used to cancel the holds, with default for any other code', 'Textarea'),
 ('ElasticsearchBoostFieldMatch', '0', NULL, 'Add a "match" query to es when searching, will follow indexes chosen in advanced search, or use title-cover for generic keyword or title index search', 'YesNo'),
 ('ElasticsearchCrossFields', '1', NULL, 'Enable "cross_fields" option for searches using Elastic search.', 'YesNo'),
 ('ElasticsearchEscapeCharacters', '', NULL, 'List of characters to always escape in intranet Elasticsearch searches', 'Free'),

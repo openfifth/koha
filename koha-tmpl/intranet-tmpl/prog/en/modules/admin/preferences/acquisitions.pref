@@ -192,6 +192,12 @@ Acquisitions:
             - " not for loan status."
             - <span class="hint">Leave empty to keep the item unchanged. Choose a value greater than zero from the <a href="/cgi-bin/koha/admin/authorised_values.pl?searchfield=NOT_LOAN">NOT_LOAN</a> authorized values, as only those stop holds being placed. An item that no longer has the on order status is not changed.</span>
         -
+            - "When a supplier cancels an order line by EDIFACT and the record would be left with nothing to fill its holds, cancel the holds using the HOLD_CANCELLATION reason chosen for the supplier's reason code (and so send the patron the HOLD_CANCELLATION notice, if you have defined one). Leave empty to leave the holds alone."
+            - pref: EdifactOrdrspHoldCancellationReasons
+              type: textarea
+              class: code
+            - '<span class="hint">Enter YAML with one line for each supplier code, as the code list and code, and the authorized value code from the <a href="/cgi-bin/koha/admin/authorised_values.pl?searchfield=HOLD_CANCELLATION">HOLD_CANCELLATION</a> category. A line with the code <code>default</code> applies to any other cancellation. For example: <code>8B:OP: OUT_OF_PRINT</code>, <code>12B:223: UNABLE_TO_SUPPLY</code> and <code>default: ORDER_CANCELLED</code>.</span>'
+        -
             - pref: EdifactInvoiceImport
               default: no
               choices:

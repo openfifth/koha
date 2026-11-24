@@ -325,6 +325,18 @@ tables:
           authorised_value: "DAMAGED"
           lib: "Item was found to be too damaged to fill hold"
 
+        - category: "HOLD_CANCELLATION"
+          authorised_value: "OUT_OF_PRINT"
+          lib: "This title is out of print"
+
+        - category: "HOLD_CANCELLATION"
+          authorised_value: "UNABLE_TO_SUPPLY"
+          lib: "The supplier is unable to supply this title"
+
+        - category: "HOLD_CANCELLATION"
+          authorised_value: "ORDER_CANCELLED"
+          lib: "The order for this title has been cancelled"
+
         # article request cancellations
         - category: "AR_CANCELLATION"
           authorised_value: "NOT_FOUND"

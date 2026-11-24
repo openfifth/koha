@@ -115,6 +115,11 @@ sub _parse_lines {
             if ( ref $coded_text eq 'ARRAY' && $coded_text->[0] ) {
                 $d->{$ctype}->{table} = $coded_text->[1];
                 $d->{$ctype}->{code}  = $coded_text->[0];
+
+                # A line can carry several coded reasons (for example an 8B and a 12B code),
+                # and the one above only keeps the last, so remember them all
+                push @{ $d->{orderline_codes} }, join( q{:}, $coded_text->[1] // q{}, $coded_text->[0] )
+                    if $ctype eq 'coded_orderline_text';
             }
 
             my $ftx = $s->elem(3);
@@ -122,8 +127,11 @@ sub _parse_lines {
                 $ftx = join q{ }, @{$ftx};
             }
             if ( exists $d->{$type} ) {     # we can only catenate repeats
-                $d->{$type} .= q{ };
-                $d->{$type} .= $ftx;
+                                            # (a coded reason can come with no free text at all)
+                if ( defined $ftx ) {
+                    $d->{$type} .= q{ };
+                    $d->{$type} .= $ftx;
+                }
             } else {
                 $d->{$type} = $ftx;
             }
@@ -409,6 +417,11 @@ sub coded_internal_note {
 sub orderline_free_text {
     my $self = shift;
     return $self->{orderline_free_text};
+}
+
+sub orderline_codes {
+    my $self = shift;
+    return $self->{orderline_codes} // [];
 }
 
 sub coded_orderline_text {
@@ -986,6 +999,31 @@ Missing POD for coded_internal_note.
 =head2 orderline_free_text
 
 Missing POD for orderline_free_text.
+
+=head2 _parse_lines
+
+Internal method called by C<new> to read the segments of the line into the hash that the
+accessors use. Coded FTX reasons are also collected in C<orderline_codes>.
+
+=head2 _format_item_description
+
+Internal function that reads the IMD segments of the line and returns a reference to a hash of
+the item description text, keyed by characteristic code. Only text descriptions are handled, and
+repeats of a code are joined with a space.
+
+=head2 _translate_action
+
+Internal function that turns the numeric action code of an order response line
+(LIN segment, DE 1229) into the name used by Koha, for example C<2> into C<cancelled>.
+The codes that are not known are returned unchanged.
+
+=head2 orderline_codes
+
+   my $codes = $line->orderline_codes;
+
+Returns a reference to an array with every coded reason sent for the line in an FTX+LIN segment,
+as C<TABLE:CODE> (for example C<8B:OP> or C<12B:223>), in the order they were sent. A supplier
+can send more than one, whereas C<coded_orderline_text> only reflects the last one.
 
 =head2 coded_orderline_text
 

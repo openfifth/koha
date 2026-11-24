@@ -22,5 +22,19 @@ return {
         );
 
         say_success( $out, "Added new system preference 'EdifactCancelledItemNotForLoanValue'" );
+
+        $dbh->do(
+            q{
+            INSERT IGNORE INTO systempreferences (variable, value, options, explanation, type)
+            VALUES (
+                'EdifactOrdrspHoldCancellationReasons',
+                '',
+                NULL,
+                'YAML mapping from the supplier reason code of an EDIFACT ORDRSP cancellation (for example 8B:OP) to the HOLD_CANCELLATION reason used to cancel the holds, with default for any other code',
+                'Textarea'
+            )
+        }
+        );
+        say_success( $out, "Added new system preference 'EdifactOrdrspHoldCancellationReasons'" );
     },
 };

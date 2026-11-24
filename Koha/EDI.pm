@@ -276,12 +276,42 @@ sub process_ordrsp {
                         $logger->warn("EDI ORDRSP: $details");
                         $has_errors = 1;
                     } else {
-                        $order->cancel( { reason => $reason } );
+
+                        # Holds on the items stop them being deleted, so when the library has said
+                        # which HOLD_CANCELLATION reason to give for this supplier code, cancel
+                        # the holds first (and so tell the patrons)
+                        my $hold_reason = _hold_cancellation_reason( $line, $logger );
+                        $order->cancel(
+                            {
+                                reason => $reason,
+                                (
+                                    $hold_reason
+                                    ? ( cancel_holds => 1, hold_cancellation_reason => $hold_reason )
+                                    : ()
+                                ),
+                            }
+                        );
 
                         # cancel() records item deletion failures ( e.g. an item still has holds )
                         # as object messages instead of dying; log and report any such messages
                         # so they are not lost in the automated flow
+                        my $holds_cancelled = 0;
                         for my $message ( @{ $order->object_messages } ) {
+                            if ( $message->message eq 'holds_cancelled' ) {
+                                $holds_cancelled = $message->payload->{count};
+                                $logger->info("EDI ORDRSP: order $ordernumber cancelled $holds_cancelled hold(s)");
+                                if ( !$message->payload->{notified} ) {
+                                    my $details = sprintf(
+                                        'Order %s: %s hold(s) were cancelled but the patrons were not told, as no HOLD_CANCELLATION notice is defined',
+                                        $ordernumber, $holds_cancelled
+                                    );
+                                    $response_message->add_to_edifact_errors(
+                                        { section => 'RFF+LI:' . $ordernumber, details => $details } );
+                                    $logger->warn("EDI ORDRSP: $details");
+                                    $has_errors = 1;
+                                }
+                                next;
+                            }
                             my $item  = $message->payload->{item};
                             my $issue = sprintf(
                                 'order %s cancellation issue: %s%s',
@@ -335,6 +365,34 @@ sub process_ordrsp {
     $response_message->status( $has_errors ? 'error' : 'received' );
     $response_message->update;
     return;
+}
+
+sub _hold_cancellation_reason {
+    my ( $line, $logger ) = @_;
+
+    my $mapping = C4::Context->yaml_preference('EdifactOrdrspHoldCancellationReasons');
+    return unless $mapping && ref $mapping eq 'HASH' && %{$mapping};
+
+    # The first code on the line that has a reason wins, then the default
+    my $reason;
+    for my $code ( @{ $line->orderline_codes } ) {
+        if ( defined $mapping->{$code} && length $mapping->{$code} ) {
+            $reason = $mapping->{$code};
+            last;
+        }
+    }
+    $reason //= $mapping->{default};
+    return unless defined $reason && length $reason;
+
+    # A reason that is not a HOLD_CANCELLATION authorised value would show the patron a bare code
+    if ( !Koha::AuthorisedValues->search( { category => 'HOLD_CANCELLATION', authorised_value => $reason } )->count ) {
+        $logger->warn(
+            "EDI ORDRSP: '$reason' in EdifactOrdrspHoldCancellationReasons is not a HOLD_CANCELLATION authorised value, holds are not cancelled"
+        );
+        return;
+    }
+
+    return $reason;
 }
 
 sub process_invoice {
@@ -2217,6 +2275,24 @@ Koha::EDI
       If unable to returns the shelfmark or classification from the GIR segment
 
       If all else fails returns empty string
+
+=head2 _hold_cancellation_reason
+
+    my $reason = _hold_cancellation_reason($line, $logger);
+
+    Internal function returning the HOLD_CANCELLATION authorised value to use when cancelling
+    the holds on an order line that the supplier has cancelled, or nothing if holds should be
+    left alone.
+
+    The reason comes from the EdifactOrdrspHoldCancellationReasons preference, a YAML mapping
+    from the codes on the ORDRSP line (as TABLE:CODE, for example 8B:OP) to a reason, with an
+    optional default. The first code on the line that has a reason wins, then the default.
+    A reason that is not a HOLD_CANCELLATION authorised value is logged and ignored, and so is
+    a preference that is empty or not valid YAML.
+
+    Parameters:
+    - $line: The Koha::Edifact::Line for the cancelled order line
+    - $logger: The EDI logger
 
 =head2 _send_duplicate_order_email_notice
 
