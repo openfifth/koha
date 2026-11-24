@@ -33,6 +33,7 @@ use Koha::Exceptions::Object;
 use Koha::Biblios;
 use Koha::Holds;
 use Koha::Items;
+use Koha::Notice::Templates;
 use Koha::Number::Price;
 use Koha::Patrons;
 use Koha::Subscriptions;
@@ -113,8 +114,10 @@ sub store {
     $order->cancel(
         {
             [
-                reason        => $reason,
-                delete_biblio => $delete_biblio
+                reason                  => $reason,
+                delete_biblio           => $delete_biblio,
+                cancel_holds            => $cancel_holds,
+                hold_cancellation_reason => $hold_cancellation_reason
             ]
         }
     );
@@ -122,6 +125,14 @@ sub store {
 This method marks an order as cancelled, optionally using the I<reason> parameter.
 As the order is cancelled, the (eventual) items linked to it are removed.
 If I<delete_biblio> is passed, it will try to remove the linked biblio.
+
+Holds placed on the items of the order, or on the record when nothing else would remain
+to fill them, stop those items being deleted. If I<cancel_holds> is passed, these holds
+(see L</holds_orphaned_by_cancellation>) are cancelled first, using
+I<hold_cancellation_reason> (a HOLD_CANCELLATION authorised value). When a reason is given the
+patron is sent the HOLD_CANCELLATION notice, if the library has defined one. A
+I<holds_cancelled> message is added to the object, with the number of holds, the reason
+and whether the patrons could be notified.
 
 If either the items or biblio removal fails, an error message is added to the object
 so the caller can take appropriate actions.
@@ -133,6 +144,33 @@ sub cancel {
 
     my $delete_biblio = $params->{delete_biblio};
     my $reason        = $params->{reason};
+
+    # Holds on the items would stop them being deleted, so cancel them first
+    if ( $params->{cancel_holds} ) {
+        my $hold_reason = $params->{hold_cancellation_reason};
+        my $holds       = $self->holds_orphaned_by_cancellation;
+        my $count       = 0;
+        while ( my $hold = $holds->next ) {
+            $hold->cancel( { cancellation_reason => $hold_reason } );
+            $count++;
+        }
+        if ($count) {
+            my $notified = $hold_reason
+                && Koha::Notice::Templates->search(
+                {
+                    module                 => 'reserves',
+                    code                   => 'HOLD_CANCELLATION',
+                    message_transport_type => 'email',
+                }
+                )->count ? 1 : 0;
+            $self->add_message(
+                {
+                    message => 'holds_cancelled',
+                    payload => { count => $count, reason => $hold_reason, notified => $notified }
+                }
+            );
+        }
+    }
 
     # Delete the related items
     my $items = $self->items;
@@ -207,6 +245,49 @@ sub cancel {
     )->store;
 
     return $self;
+}
+
+=head3 holds_orphaned_by_cancellation
+
+    my $holds = $order->holds_orphaned_by_cancellation;
+
+Returns the unfilled holds (a I<Koha::Holds> set) that could no longer be filled if this
+order were cancelled and its items deleted:
+
+=over 4
+
+=item * holds placed on the items of this order, and
+
+=item * record level holds, when nothing else would be left to fill them, meaning the record
+has no other item, no other uncancelled order line and no subscription (the same test used to decide
+whether the biblio can be deleted on cancellation).
+
+=back
+
+These are the holds that stop the items from being deleted.
+
+=cut
+
+sub holds_orphaned_by_cancellation {
+    my ($self) = @_;
+
+    my $biblio = $self->biblio;
+    return Koha::Holds->new->empty unless $biblio;
+
+    my @itemnumbers = $self->items->get_column('itemnumber');
+
+    my @conditions;
+    push @conditions, { itemnumber => { -in => \@itemnumbers } } if @itemnumbers;
+
+    my $nothing_else_left =
+           $biblio->items->search( @itemnumbers ? { itemnumber => { -not_in => \@itemnumbers } } : {} )->count == 0
+        && $biblio->uncancelled_orders->search( { ordernumber => { '!=' => $self->ordernumber } } )->count == 0
+        && $biblio->subscriptions->count == 0;
+    push @conditions, { itemnumber => undef } if $nothing_else_left;
+
+    return Koha::Holds->new->empty unless @conditions;
+
+    return $biblio->holds->unfilled->search( { -or => \@conditions } );
 }
 
 =head3 add_item

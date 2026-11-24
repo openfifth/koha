@@ -20,8 +20,9 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 14;
+use Test::More tests => 15;
 use Test::Exception;
+use Test::Warn;
 
 use t::lib::TestBuilder;
 use t::lib::Mocks;
@@ -32,6 +33,7 @@ use Koha::Biblios;
 use Koha::Database;
 use Koha::DateUtils qw(dt_from_string);
 use Koha::Items;
+use Koha::Notice::Messages;
 
 my $schema  = Koha::Database->schema;
 my $builder = t::lib::TestBuilder->new;
@@ -1037,6 +1039,145 @@ subtest 'cancel() tests' => sub {
     $order->discard_changes;
     is( $order->orderstatus,             'cancelled', 'Check status after second cancel' );
     is( $order->datecancellationprinted, $dt->ymd,    'Check date after second cancel' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'cancel() with cancel_holds' => sub {
+    plan tests => 18;
+
+    $schema->storage->txn_begin;
+
+    Koha::Notice::Templates->search( { module => 'reserves', code => 'HOLD_CANCELLATION' } )->delete;
+
+    my $patron = $builder->build_object( { class => 'Koha::Patrons', value => { email => 'patron@example.org' } } );
+    t::lib::Mocks::mock_userenv(
+        { patron => $builder->build_object( { class => 'Koha::Patrons', value => { flags => 1 } } ) } );
+
+    # An order for a record whose only item is on order, with a record level hold on it
+    my $new_order = sub {
+        my $item  = $builder->build_sample_item( { notforloan => -1 } );
+        my $order = $builder->build_object(
+            {
+                class => 'Koha::Acquisition::Orders',
+                value => {
+                    orderstatus             => 'ordered',
+                    biblionumber            => $item->biblionumber,
+                    datecancellationprinted => undef,
+                    cancellationreason      => undef,
+                }
+            }
+        );
+        $order->add_item( $item->id );
+        return ( $order, $item );
+    };
+    my $new_hold = sub {
+        my (%params) = @_;
+        return $builder->build_object(
+            {
+                class => 'Koha::Holds',
+                value => {
+                    borrowernumber => $patron->borrowernumber,
+                    found          => undef,
+                    itemnumber     => undef,
+                    %params,
+                },
+            }
+        );
+    };
+
+    # Without cancel_holds the hold keeps the item: nothing is deleted
+    my ( $order, $item ) = $new_order->();
+    my $hold = $new_hold->( biblionumber => $item->biblionumber );
+    is( $order->holds_orphaned_by_cancellation->count, 1, 'The record level hold would be orphaned' );
+    $order->cancel( { reason => 'Out of print' } );
+    ok( Koha::Items->find( $item->id ), 'The item stays when its record has a hold and cancel_holds is not set' );
+    ok( Koha::Holds->find( $hold->id ), 'The hold is untouched' );
+
+    # With cancel_holds, a reason and a notice: the hold is cancelled and the item removed
+    $builder->build_object(
+        {
+            class => 'Koha::Notice::Templates',
+            value => {
+                module                 => 'reserves',
+                code                   => 'HOLD_CANCELLATION',
+                message_transport_type => 'email',
+                lang                   => 'default',
+                branchcode             => '',
+                is_html                => 0,
+                title                  => 'Hold cancelled',
+                content                => 'Your hold was cancelled.',
+            }
+        }
+    );
+    ( $order, $item ) = $new_order->();
+    $hold = $new_hold->( biblionumber => $item->biblionumber );
+    my $queued_before = Koha::Notice::Messages->search( { letter_code => 'HOLD_CANCELLATION' } )->count;
+    $order->cancel( { reason => 'Out of print', cancel_holds => 1, hold_cancellation_reason => 'OOP' } );
+    $order->discard_changes;
+    is( $order->orderstatus,            'cancelled', 'The order is cancelled' );
+    is( Koha::Items->find( $item->id ), undef,       'The item is deleted once the hold is gone' );
+    is( Koha::Holds->find( $hold->id ), undef,       'The hold is no longer pending' );
+    my $old_hold = Koha::Old::Holds->find( $hold->id );
+    is( $old_hold->cancellation_reason, 'OOP', 'The cancellation reason is recorded' );
+    is(
+        Koha::Notice::Messages->search( { letter_code => 'HOLD_CANCELLATION' } )->count,
+        $queued_before + 1, 'The patron is sent the hold cancellation notice'
+    );
+    my ($message) = grep { $_->message eq 'holds_cancelled' } @{ $order->object_messages };
+    is( $message->payload->{count},    1, 'The message gives the number of holds cancelled' );
+    is( $message->payload->{notified}, 1, 'The message says the patrons were notified' );
+
+    # No notice defined: holds are still cancelled, but the caller is told nobody was notified
+    Koha::Notice::Templates->search( { module => 'reserves', code => 'HOLD_CANCELLATION' } )->delete;
+    ( $order, $item ) = $new_order->();
+    $hold = $new_hold->( biblionumber => $item->biblionumber );
+    warning_like { $order->cancel( { cancel_holds => 1, hold_cancellation_reason => 'OOP' } ) }
+    qr/No reserves HOLD_CANCELLATION letter/, 'Koha warns that there is no notice to send';
+    ($message) = grep { $_->message eq 'holds_cancelled' } @{ $order->object_messages };
+    is( $message->payload->{notified},  0,     'Not notified when the library has no HOLD_CANCELLATION notice' );
+    is( Koha::Items->find( $item->id ), undef, 'The item is still deleted' );
+
+    # No reason: holds are cancelled silently
+    ( $order, $item ) = $new_order->();
+    $hold = $new_hold->( biblionumber => $item->biblionumber );
+    $order->cancel( { cancel_holds => 1 } );
+    is( Koha::Holds->find( $hold->id ), undef, 'The hold is cancelled without a reason' );
+
+    # Another item on the record can fill a record level hold, so that hold is kept
+    ( $order, $item ) = $new_order->();
+    $builder->build_sample_item( { biblionumber => $item->biblionumber } );
+    $hold = $new_hold->( biblionumber => $item->biblionumber );
+    is(
+        $order->holds_orphaned_by_cancellation->count, 0,
+        'A record level hold is not orphaned when another item exists'
+    );
+    $order->cancel( { cancel_holds => 1, hold_cancellation_reason => 'OOP' } );
+    ok( Koha::Holds->find( $hold->id ), 'The record level hold is kept' );
+
+    # A hold on the item itself is orphaned even then
+    ( $order, $item ) = $new_order->();
+    $builder->build_sample_item( { biblionumber => $item->biblionumber } );
+    $hold = $new_hold->( biblionumber => $item->biblionumber, itemnumber => $item->id );
+    is( $order->holds_orphaned_by_cancellation->count, 1, 'An item level hold on the cancelled item is orphaned' );
+
+    # Another uncancelled order line for the record can still bring in an item
+    ( $order, $item ) = $new_order->();
+    $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Orders',
+            value => {
+                orderstatus             => 'ordered',
+                biblionumber            => $item->biblionumber,
+                datecancellationprinted => undef,
+            }
+        }
+    );
+    $new_hold->( biblionumber => $item->biblionumber );
+    is(
+        $order->holds_orphaned_by_cancellation->count, 0,
+        'A record level hold is not orphaned while another order line is open'
+    );
 
     $schema->storage->txn_rollback;
 };
