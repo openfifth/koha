@@ -1,5 +1,7 @@
 [% USE raw %]
 [% USE Koha %]
+[% USE AuthorisedValues %]
+[% USE KohaDates %]
 [% PROCESS 'i18n.inc' %]
 [% INCLUDE 'doc-head-open.inc' %]
 <title
@@ -46,6 +48,44 @@
                     [% END %]
                 </p>
                 <p> [% PROCESS 'av-build-dropbox.inc' name="reason", category="ORDER_CANCELLATION_REASON" default="0" %] </p>
+
+                [% IF error_hold_reason_required %]
+                    <div class="alert alert-danger">Choose a reason for cancelling the holds, so the patrons can be told why.</div>
+                [% END %]
+
+                [% IF orphaned_holds && orphaned_holds.count %]
+                    <div class="alert alert-info" id="orphaned_holds">
+                        <h2>Holds on this title</h2>
+                        <p> Once this order is cancelled, [% orphaned_holds.count | html %] hold(s) can no longer be filled, and while they remain the items cannot be deleted: </p>
+                        <ul>
+                            [% FOREACH hold IN orphaned_holds %]
+                                <li>
+                                    <a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=[% hold.borrowernumber | uri %]">[% INCLUDE 'patron-title.inc' patron=hold.patron %]</a>
+                                    (placed [% hold.reservedate | $KohaDates %])
+                                </li>
+                            [% END %]
+                        </ul>
+                        [% IF can_cancel_holds %]
+                            [% IF AuthorisedValues.GetAuthValueDropbox('HOLD_CANCELLATION').count %]
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="cancel_holds" name="cancel_holds" value="1" />
+                                    <label class="form-check-label" for="cancel_holds">Cancel these holds and tell the patrons</label>
+                                </div>
+                                <p>
+                                    <label for="hold_cancellation_reason">Reason given to the patrons:</label>
+                                    [% PROCESS 'av-build-dropbox.inc' name="hold_cancellation_reason", category="HOLD_CANCELLATION", empty=1 %]
+                                </p>
+                                [% UNLESS has_cancellation_notice %]
+                                    <p class="alert alert-warning">There is no HOLD_CANCELLATION notice defined, so the patrons will not be emailed. Define one in Tools &rsaquo; Notices &amp; slips.</p>
+                                [% END %]
+                            [% ELSE %]
+                                <p>To cancel the holds here, add reasons to the HOLD_CANCELLATION authorized value category.</p>
+                            [% END %]
+                        [% ELSE %]
+                            <p>You do not have permission to cancel holds, so they will be left in place.</p>
+                        [% END %]
+                    </div>
+                [% END %]
                 <input type="hidden" name="op" value="cud-confirmcancel" />
                 <input type="hidden" value="[% ordernumber | html %]" name="ordernumber" />
                 <input type="hidden" value="[% biblionumber | html %]" name="biblionumber" />
@@ -67,6 +107,16 @@
         <div class="[% div_class | html %]">
             [% IF ( success_cancelorder ) %]
                 The order has been successfully cancelled
+                [% IF holds_cancelled %]
+                    <p>
+                        [% holds_cancelled | html %] hold(s) were cancelled.
+                        [% IF holds_notified %]
+                            The patrons have been sent the hold cancellation notice.
+                        [% ELSE %]
+                            The patrons were not emailed, as no HOLD_CANCELLATION notice is defined.
+                        [% END %]
+                    </p>
+                [% END %]
             [% ELSE %]
                 An error has occurred.
                 [% IF error_order_already_cancelled %]
@@ -79,6 +129,9 @@
                 [% END %]
                 [% IF ( error_delbiblio ) %]
                     <p>The order has been cancelled, although the record has not been deleted.</p>
+                [% END %]
+                [% IF holds_cancelled %]
+                    <p>[% holds_cancelled | html %] hold(s) were cancelled[% IF holds_notified %]and the patrons notified[% END %].</p>
                 [% END %]
             [% END %]
             <p><a href="[% referrer | url %]">OK</a></p>
