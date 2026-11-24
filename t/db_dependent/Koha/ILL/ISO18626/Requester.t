@@ -18,10 +18,11 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 6;
+use Test::More tests => 7;
 use Test::MockModule;
 use Test::MockObject;
 
+use HTTP::Response;
 use JSON qw( decode_json );
 use XML::LibXML;
 
@@ -232,6 +233,78 @@ subtest 'requestingAgencyId without ISO18626AgencyId' => sub {
     );
     like( $warnings[0], qr/No requesting agency ID.*ISO18626AgencyId/, 'Warns about the missing agency ID' );
 
+    $schema->storage->txn_rollback;
+};
+
+subtest 'retrieve_document() tests' => sub {
+
+    plan tests => 13;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'ISO18626AgencyId', 'GB-REQ' );
+
+    my $illrequest = $builder->build_object( { class => 'Koha::ILL::Requests' } );
+    my $url        = 'https://supplier.example/api/v1/public/ill/iso18626/documents/abc/file/content';
+
+    my ( $requested_url, $download );
+    $mock_ua->mock(
+        'get',
+        sub {
+            my ( $self, $get_url ) = @_;
+            $requested_url = $get_url;
+            return $download;
+        }
+    );
+
+    my $result = Koha::ILL::ISO18626::Requester->retrieve_document( { illrequest => $illrequest } );
+    is( $result->{error}, 'No document URL', 'Nothing retrieved without a URL' );
+
+    $result =
+        Koha::ILL::ISO18626::Requester->retrieve_document( { illrequest => $illrequest, url => 'file:///etc/passwd' } );
+    like( $result->{error}, qr/Not an HTTP or HTTPS URL/, 'Only HTTP and HTTPS URLs are retrieved' );
+
+    $download = HTTP::Response->new( 404, 'Not Found' );
+    $result   = Koha::ILL::ISO18626::Requester->retrieve_document( { illrequest => $illrequest, url => $url } );
+    like(
+        $result->{error}, qr/Could not download the document from \Q$url\E: 404 Not Found/,
+        'Download failures are returned'
+    );
+    is( $illrequest->documents->count, 0, 'No document is stored when the download fails' );
+
+    $download = HTTP::Response->new(
+        200, 'OK',
+        [ 'Content-Type' => 'application/pdf', 'Content-Disposition' => 'attachment; filename="article.pdf"' ],
+        '%PDF-1.4 article'
+    );
+    $result = Koha::ILL::ISO18626::Requester->retrieve_document( { illrequest => $illrequest, url => $url } );
+    is( $requested_url, $url, 'The document is downloaded from the URL' );
+    ok( $result->{success} && $result->{warning}, 'Retrieved, with a warning' );
+    like( $result->{warning}, qr/No supplying agency/, 'The warning says why Received was not sent' );
+    is( $illrequest->documents->count, 1, 'The document is stored on the request' );
+
+    my $supplying_agency = $builder->build_object(
+        { class => 'Koha::ILL::ISO18626::SupplyingAgencies', value => { type => 'ISIL', agency_id => 'GB-SUP' } } );
+    $illrequest->add_or_update_attributes( { iso18626_supplying_agency_id => $supplying_agency->id } );
+
+    $http_ok      = 1;
+    $confirmation = $confirmation_xml->( 'requestingAgencyMessage', 'OK' );
+
+    $result = Koha::ILL::ISO18626::Requester->retrieve_document( { illrequest => $illrequest, url => $url } );
+    ok( $result->{success} && !exists $result->{warning}, 'Retrieved without a warning' );
+    is( $result->{document}->file_name,    'article.pdf',      'The document keeps the file name it was sent with' );
+    is( $result->{document}->file_content, '%PDF-1.4 article', 'The document has the downloaded content' );
+    is(
+        $logged->( $illrequest, 'requestingAgencyMessage' )->{requestingAgencyMessage}->{action}, 'Received',
+        'Received is sent to the supplying agency'
+    );
+
+    my $mock_request = Test::MockModule->new('Koha::ILL::Request');
+    $mock_request->mock( 'add_document', sub { die "Too large\n" } );
+    $result = Koha::ILL::ISO18626::Requester->retrieve_document( { illrequest => $illrequest, url => $url } );
+    like( $result->{error}, qr/Could not store the document from \Q$url\E/, 'Storage failures are returned' );
+
+    $mock_ua->unmock('get');
     $schema->storage->txn_rollback;
 };
 

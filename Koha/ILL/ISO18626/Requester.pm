@@ -22,6 +22,8 @@ use Modern::Perl;
 use File::Basename qw( dirname );
 use JSON           qw( encode_json );
 use LWP::UserAgent;
+use Try::Tiny qw( catch try );
+use URI;
 use XML::LibXML;
 
 use C4::Context;
@@ -141,6 +143,60 @@ sub send_requesting_agency_message {
     };
 
     return $class->_send( $illrequest, $supplying_agency, 'requestingAgencyMessage', $message );
+}
+
+=head3 retrieve_document
+
+    my $result = Koha::ILL::ISO18626::Requester->retrieve_document(
+        { illrequest => $illrequest, url => $url }
+    );
+
+Downloads the document the supplying agency sent at C<$url>, stores it on C<$illrequest> and
+sends the supplying agency a C<Received> requestingAgencyMessage.
+
+On success, the result also has the stored I<Koha::ILL::Document> in C<document>, and a
+C<warning> if the C<Received> message could not be sent.
+
+=cut
+
+sub retrieve_document {
+    my ( $class, $params ) = @_;
+
+    my $illrequest = $params->{illrequest};
+    my $url        = $params->{url};
+
+    return { success => 0, error => 'No document URL' } unless $url;
+    return { success => 0, error => sprintf( 'Not an HTTP or HTTPS URL: %s', $url ) }
+        unless ( URI->new($url)->scheme // '' ) =~ /^https?$/;
+
+    my $response = LWP::UserAgent->new(
+        agent             => 'Koha ' . $Koha::VERSION,
+        timeout           => 60,
+        max_redirect      => 0,
+        protocols_allowed => [ 'http', 'https' ],
+    )->get($url);
+
+    return {
+        success => 0,
+        error   => sprintf( 'Could not download the document from %s: %s', $url, $response->status_line )
+        }
+        unless $response->is_success;
+
+    my $document = try {
+        $illrequest->add_document(
+            { file_name => $response->filename || 'document', file_content => $response->content } );
+    } catch {
+        return;
+    };
+    return { success => 0, error => sprintf( 'Could not store the document from %s', $url ) } unless $document;
+
+    my $received = $class->send_requesting_agency_message( { illrequest => $illrequest, action => 'Received' } );
+
+    return {
+        success  => 1,
+        document => $document,
+        $received->{success} ? () : ( warning => $received->{error} ),
+    };
 }
 
 =head3 status_graph
