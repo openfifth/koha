@@ -17,7 +17,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 14;
+use Test::More tests => 15;
 use Test::Warn;
 use Test::MockModule;
 use t::lib::TestBuilder;
@@ -86,5 +86,33 @@ $builder->build_sample_item( { barcode => '39999000019193' } );    # 14-digit
 $builder->build_sample_item( { barcode => '3999900001927' } );     # 13-digit EAN-13
 ( $nextnum, $scr ) = C4::Barcodes::ValueBuilder::EAN13::get_barcode( \%args );
 is( $nextnum, '3999900001934', 'EAN-13 picks max among 13-digit barcodes, ignores 14-digit' );
+
+subtest 'hbyymmincr::get_barcode() library code prefix tests' => sub {
+    plan tests => 4;
+
+    $dbh->do(q|DELETE FROM items|);
+    $builder->build_sample_item( { barcode => '540060012079999' } );
+    $builder->build_sample_item( { barcode => $library->branchcode . '12070005' } );
+    ($nextnum) = C4::Barcodes::ValueBuilder::hbyymmincr::get_barcode( \%args );
+    is( $nextnum, '12070006', 'Barcodes that do not start with a library code are ignored' );
+
+    $dbh->do(q|DELETE FROM items|);
+    $builder->build_sample_item( { barcode => $library->branchcode . '120700051' } );
+    ($nextnum) = C4::Barcodes::ValueBuilder::hbyymmincr::get_barcode( \%args );
+    is( $nextnum, '12070001', 'Barcodes with extra digits after the sequence are ignored' );
+
+    $dbh->do(q|DELETE FROM items|);
+    $builder->build_object( { class => 'Koha::Libraries', value => { branchcode => 'A_B' } } );
+    $builder->build_sample_item( { barcode => 'AXB12079000' } );
+    $builder->build_sample_item( { barcode => 'A_B12070005' } );
+    ($nextnum) = C4::Barcodes::ValueBuilder::hbyymmincr::get_barcode( \%args );
+    is( $nextnum, '12070006', 'Wildcard characters in a library code match only themselves' );
+
+    $dbh->do(q|DELETE FROM items|);
+    $builder->build_object( { class => 'Koha::Libraries', value => { branchcode => '123' } } );
+    $builder->build_sample_item( { barcode => '12312070005' } );
+    ($nextnum) = C4::Barcodes::ValueBuilder::hbyymmincr::get_barcode( \%args );
+    is( $nextnum, '12070006', 'Numeric library codes are matched' );
+};
 
 $schema->storage->txn_rollback;
