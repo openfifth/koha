@@ -41,19 +41,29 @@ sub get_barcode {
 
 package C4::Barcodes::ValueBuilder::hbyymmincr;
 use C4::Context;
+use Koha::Items;
+use Koha::Libraries;
 
 sub get_barcode {
-    my ($args)  = @_;
-    my $nextnum = 0;
-    my $year    = substr( $args->{year}, -2 );
-    my $month   = $args->{mon};
-    my $query   = "SELECT MAX(CAST(SUBSTRING(barcode,-4) AS signed)) AS number FROM items WHERE barcode REGEXP ?";
-    my $sth     = C4::Context->dbh->prepare($query);
-    $sth->execute("^[-a-zA-Z0-9]{1,}$year$month");
-    while ( my ($count) = $sth->fetchrow_array ) {
-        $nextnum = $count if $count;
-        $nextnum = 0      if $nextnum == 9999;    # this sequence only allows for cataloging 9999 items per month
-    }
+    my ($args)   = @_;
+    my $year     = substr( $args->{year}, -2 );
+    my $month    = $args->{mon};
+    my @prefixes = map { { -like => ( $_ =~ s/([\\%_])/\\$1/gr ) . $year . $month . '____' } }
+        Koha::Libraries->search->get_column('branchcode');
+    my $nextnum = Koha::Items->search(
+        {
+            -and => [
+                { barcode => \@prefixes },
+                { barcode => { -regexp => '[0-9]{4}$' } },
+            ]
+        },
+        {
+            select => \'CAST(SUBSTRING(barcode, -4) AS SIGNED)',
+            as     => ['sequence'],
+        }
+        )->_resultset->get_column('sequence')->max
+        || 0;
+    $nextnum = 0 if $nextnum == 9999;    # this sequence only allows for cataloging 9999 items per month
     $nextnum++;
     $nextnum = sprintf( "%0*d", "4", $nextnum );
     $nextnum = $year . $month . $nextnum;
