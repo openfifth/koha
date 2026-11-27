@@ -18,7 +18,7 @@
 # along with Koha; if not, see <https://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use Test::More tests => 182;
+use Test::More tests => 183;
 use Test::NoWarnings;
 use Test::Warn;
 use Test::Exception;
